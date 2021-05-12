@@ -1,0 +1,11 @@
+{
+  "name": "markdowneditor",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^2.12.6"
+  }
+}
