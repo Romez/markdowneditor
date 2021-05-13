@@ -39,6 +39,12 @@
             :text text
             :state :adding})))
 
+(defn show-message [msg]
+  (assoc msg :state :showing))
+
+(defn hide-message [msg]
+  (assoc msg :state :hiding))
+
 (defn md->html [md]
   (.makeHtml showdown-converter md))
 
@@ -58,15 +64,10 @@
 (defn message [msg]
   (when (= (:state msg) :adding)
     (js/setTimeout
-     #(swap! flash-messages assoc-in [(:id msg) :state] :showing)
+     #(swap! flash-messages update (:id msg) show-message)
      0))
-
   (fn [msg]
-    [:div {:on-click (fn []
-                       (println "OK: " (:id msg))
-                       (swap! flash-messages assoc-in
-                               [(:id msg) :state] :hiding)
-                       )
+    [:div {:on-click #(swap! flash-messages update (:id msg) hide-message)
            :style {:background-color "#c0ff01"
                    :padding "5px 10px"
                    :cursor :pointer
@@ -81,8 +82,8 @@
                                   (swap! flash-messages assoc-in
                                          [(:id msg) :timeout]
                                          (js/setTimeout
-                                          #(swap! flash-messages assoc-in
-                                                  [(:id msg) :state] :hiding)
+                                          #(swap! flash-messages update (:id msg)
+                                                  hide-message)
                                           5000)))
 
                                 (when (= (:state msg) :hiding)
@@ -103,51 +104,52 @@
     (for [id (keys @flash-messages)]
       ^{:key id} [message (get @flash-messages id)]))])
 
+(defn md-editor []
+  [:div
+   [:h2 "MD Editor"]
+   [:textarea
+    {:on-change (fn [e]
+                  (reset! editor-state {:format :md
+                                        :value (-> e .-target .-value)}))
+     :value (->md @editor-state)
+     :style {:resize :none
+             :width "100%"
+             :min-height "500px"}}]
+   [:button {:on-click (fn [e]
+                         (add-message "md copied")
+                         (copy-to-clipboard (->md @editor-state)))}
+    "copy"]])
+
+(defn html-editor []
+  [:div
+   [:h2 "HTML editor"]
+   [:textarea
+    {:on-change (fn [e]
+                  (reset! editor-state {:format :html
+                                        :value (-> e .-target .-value)}))
+     :value (->html @editor-state)
+     :style {:resize :none
+             :width "100%"
+             :min-height "500px"}}]])
+
+(defn html-preview []
+  [:div
+   [:h2 "HTML Preview"]
+   [:div {:dangerouslySetInnerHTML {:__html (->html @editor-state)}}]
+   [:button {:on-click #(copy-to-clipboard (->html @editor-state))}
+    "copy"]])
+
 (defn app []
   [:div {:style {:position :relative}}
    [:h1 "Markdown editor"]
-   [:pre (pr-str @flash-messages)]
-   [:div {:style {
-                  :position :absolute
-                  :right 0
-                  :top 0
-                  :gap 5
-                  :display :flex
-                  :flex-direction :column}}
-    (doall
-     (for [id (keys @flash-messages)]
-       ^{:key id} [message (get @flash-messages id)]))]
-   [:div {:style {:display :flex
-                  :gap 10}}
+   [messages]
+   [:div {:style {:display :flex :gap 10}}
     [:div {:style {:flex 1}}
-     [:h2 "MD Editor"]
-     [:textarea
-      {:on-change (fn [e]
-                    (reset! editor-state {:format :md
-                                          :value (-> e .-target .-value)}))
-       :value (->md @editor-state)
-       :style {:resize :none
-               :width "100%"
-               :min-height "500px"}}]
-     [:button {:on-click (fn [e]
-                           (add-message "md copied")
-                           (copy-to-clipboard (->md @editor-state)))}
-      "copy"]]
+     [md-editor]]
     [:div {:style {:flex 1}}
-     [:h2 "HTML editor"]
-     [:textarea
-      {:on-change (fn [e]
-                    (reset! editor-state {:format :html
-                                          :value (-> e .-target .-value)}))
-       :value (->html @editor-state)
-       :style {:resize :none
-               :width "100%"
-               :min-height "500px"}}]]
+     [html-editor]]
     [:div {:style {:flex 1}}
-     [:h2 "HTML Preview"]
-     [:div {:dangerouslySetInnerHTML {:__html (->html @editor-state)}}]
-     [:button {:on-click #(copy-to-clipboard (->html @editor-state))}
-      "copy"]]]])
+     [html-preview]]]])
 
 (defn mount! []
   (rd/render [app]
