@@ -11,16 +11,11 @@
     (.setAttribute el "readonly" "")
     (set! (-> el .-style .-position) "absolute")
     (set! (-> el .-style .-left) "-9999px")
-    ;; (.appendChild (-> js/document .-body) el)
     (-> js/document .-body (.appendChild el))
 
     (.select el)
-
     (.execCommand js/document "copy")
-
-    ;; (.removeChild (-> js/document .-body) el)
     (-> js/document .-body (.removeChild el))
-
     (if (nil? selected)
       (-> js/document .getSelection .removeAllRanges)
       (-> js/document .getSelection (.addRange selected)))))
